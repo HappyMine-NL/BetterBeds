@@ -13,7 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <minecraft.plugin.version>${version} ${buildDescription}</minecraft.plugin.version>
+        <minecraft.plugin.version>1.2-SNAPSHOT ${buildDescription}</minecraft.plugin.version>
     </properties>
 
     <repositories>
