@@ -120,6 +120,7 @@ public class BetterBeds extends JavaPlugin implements Listener {
             }
         }
 
+        bossBar.setVisible(false);
         bossBar.setColor(BarColor.valueOf(getConfig().getString("bossBarColor")));
         bossBar.setStyle(BarStyle.valueOf(getConfig().getString("bossBarStyle")));
     }

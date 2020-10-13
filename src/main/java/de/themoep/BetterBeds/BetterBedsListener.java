@@ -22,10 +22,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerBedEnterEvent;
-import org.bukkit.event.player.PlayerBedLeaveEvent;
-import org.bukkit.event.player.PlayerChangedWorldEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 
 import java.util.logging.Level;
 
@@ -96,6 +93,17 @@ public class BetterBedsListener implements Listener {
     }
 
     /**
+     * Recalculates the number of sleeping players if a player quits the game between 12500 and 100 time ticks
+     * @param event PlayerQuitEvent
+     */
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        if (!plugin.calculateBedLeave(event.getPlayer(), event.getPlayer().getWorld(), true))
+            plugin.checkPlayers(event.getPlayer().getWorld(), true);
+        if(!plugin.skippingNight && plugin.bossBar.isVisible()) plugin.bossBar.addPlayer(event.getPlayer());
+    }
+
+    /**
      * Recalculates the number of sleeping players if a player changes from a normal world between 12500 and 100 time ticks
      * @param event PlayerChangedWorldEvent
      */
@@ -103,5 +111,6 @@ public class BetterBedsListener implements Listener {
     public void onWorldChange(PlayerChangedWorldEvent event) {
         if (!plugin.calculateBedLeave(event.getPlayer(), event.getFrom(), false))
             plugin.checkPlayers(event.getFrom(), false);
+        if(!plugin.skippingNight && plugin.bossBar.isVisible()) plugin.bossBar.addPlayer(event.getPlayer());
     }
 }
