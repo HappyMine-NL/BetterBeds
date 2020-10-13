@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 /*
@@ -204,9 +205,17 @@ public class BetterBeds extends JavaPlugin implements Listener {
      * @param onQuit
      */
     public boolean checkPlayers(final World world, boolean onQuit) {
+        WorldInfo worldInfo = getInfo(world);
         if (isPlayerRequirementSatisfied(world, onQuit)) {
-            WorldInfo worldInfo = getInfo(world);
-            if (nightSpeed == 0) {
+            if (nightSpeed == -1) {
+                getLogger().log(Level.INFO, "Skipping to next day in 100 ticks in world " + world.getName());
+                worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
+                    worldInfo.setTransitionTask(0);
+                    if (isPlayerRequirementSatisfied(world, false)) {
+                        setWorldToMorning(world);
+                    }
+                }, 100));
+            } else if (nightSpeed == 0) {
                 getLogger().log(Level.INFO, "Set time to dawn in world " + world.getName());
                 notifyPlayers(world, (worldInfo.getAsleep().size() > 1) ? "notify" : "notifyOnSingle", getReplacements(world, onQuit));
                 setWorldToMorning(world);
@@ -216,7 +225,26 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
                 notifyPlayers(world, (worldInfo.getAsleep().size() > 1) ? "notify" : "notifyOnSingle", getReplacements(world, onQuit));
 
-                getLogger().log(Level.INFO, "Timelapsing " + nightSpeed + "x until dawn in world " + world.getName());
+                getLogger().log(Level.INFO, "Timelapsing " + nightSpeed + " ticks until dawn in world " + world.getName());
+                AtomicInteger loopAmount = new AtomicInteger(nightSpeed);
+                int period = 1;
+                double skipPerLoopTemp = (23460D - world.getTime()) / nightSpeed;
+                long skipPerLoop;
+                if (skipPerLoopTemp < 1) {
+                    if (skipPerLoopTemp < 0) {
+                        skipPerLoopTemp = 1;
+                    }
+                    period = (int) (1 / skipPerLoopTemp);
+                    if (period > nightSpeed) {
+                        period = nightSpeed;
+                        loopAmount.set(1);
+                    } else {
+                        loopAmount.set((int) Math.round(nightSpeed / (double) period));
+                    }
+                    skipPerLoop = 1;
+                } else {
+                    skipPerLoop = (long) Math.floor(skipPerLoopTemp);
+                }
                 worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
                     if (!isPlayerRequirementSatisfied(world, false)) {
                         getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
@@ -224,17 +252,20 @@ public class BetterBeds extends JavaPlugin implements Listener {
                         return;
                     }
                     long currentTime = world.getTime();
-                    long newTime = currentTime + nightSpeed;
-                    if (newTime >= 23450) {
+                    long newTime = currentTime + skipPerLoop;
+                    if (loopAmount.decrementAndGet() <= 0) {
                         getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
                         worldInfo.setTransitionTask(0);
                         setWorldToMorning(world);
-                    } else {
-                        world.setTime(currentTime + nightSpeed);
+                    } else if (newTime < 23460) {
+                        world.setTime(newTime);
                     }
-                }, 1L, 1L));
+                }, period, period));
             }
             return true;
+        } else if (worldInfo.isTransitioning()) {
+            getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
+            worldInfo.setTransitionTask(0);
         }
         return false;
     }
@@ -280,7 +311,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
      * @param world The world to change the time for
      */
     public void setWorldToMorning(World world) {
-        world.setTime(23450);
+        if (world.getTime() < 24000L) {
+            world.setTime(24000L);
+        }
         if (world.hasStorm())
             world.setStorm(false);
 
@@ -391,7 +424,7 @@ public class BetterBeds extends JavaPlugin implements Listener {
         float percentage = (float) Math.round(((double) sleeping / required * 100 * 100) / 100);
         replacements.put("percentage", String.format("%.2f", percentage));
 
-        int more = required - sleeping;
+        int more = Math.max(required - sleeping, 0);
         replacements.put("more", String.valueOf(more));
 
         return replacements;
