@@ -14,9 +14,15 @@ ignoredHelp: true
 # If set to true this will reset the phantom spawn chance for all players in the world when skipping the night
 # If set to false it will only reset them for the players that slept in the bed (vanilla behaviour)
 resetPhantomsForAll: false
+# BossBar color on bossbar notifications, possible values:
+# BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
+bossBarColor: BLUE
+# BossBar style on BossBar notificaitons, possible values:
+# SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
+bossBarStyle: SOLID
 # The Type defines who should get the message.
 # Possibly values:
-#   noone - Don't display the message to anyone
+#   none - Don't display the message to anyone
 #   sleeping - Only players who lye in a bed
 #   world - Every player who is in the same world
 #   server - Every player on the server
@@ -25,6 +31,7 @@ resetPhantomsForAll: false
 #   chat - As a chat message
 #   title - As a title
 #   actionbar - In the action bar
+#   bossbar - In the bossbar
 notifications:
   sleep:
     type: "sleeping"
@@ -34,7 +41,7 @@ notifications:
     location: "chat"
   wake:
     type: "world"
-    location: "chat"
+    location: "chat" # Cannot be in bossbar
   notify:
     type: "sleeping"
     location: "chat"

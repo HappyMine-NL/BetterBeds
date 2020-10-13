@@ -64,13 +64,15 @@ public class BetterBedsListener implements Listener {
         worldInfo.setAsleep(event.getPlayer());
         worldInfo.setLastPlayerToEnterBed(event.getPlayer());
 
-        if (worldInfo.isTransitioning()) {
-            plugin.notifyPlayers(world, "sleep", plugin.getReplacements(world, event.getPlayer().getName(), worldInfo.getAsleep().size(), plugin.getRequiredPlayers(world, false)));
-        } else {
-            plugin.getLogger().log(Level.INFO, event.getPlayer().getName() + " sleeps now. " + worldInfo.getAsleep().size() + "/" + requiredPlayers + " players are asleep in world " + world.getName());
-
-            if (!plugin.checkPlayers(world, false))
+        if(!plugin.skippingNight) {
+            if (worldInfo.isTransitioning()) {
                 plugin.notifyPlayers(world, "sleep", plugin.getReplacements(world, event.getPlayer().getName(), worldInfo.getAsleep().size(), plugin.getRequiredPlayers(world, false)));
+            } else {
+                plugin.getLogger().log(Level.INFO, event.getPlayer().getName() + " sleeps now. " + worldInfo.getAsleep().size() + "/" + requiredPlayers + " players are asleep in world " + world.getName());
+
+                if (!plugin.checkPlayers(world, false))
+                    plugin.notifyPlayers(world, "sleep", plugin.getReplacements(world, event.getPlayer().getName(), worldInfo.getAsleep().size(), plugin.getRequiredPlayers(world, false)));
+            }
         }
     }
 

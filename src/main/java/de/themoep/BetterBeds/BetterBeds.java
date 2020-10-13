@@ -5,10 +5,14 @@ import de.themoep.utils.lang.bukkit.LanguageManager;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Statistic;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -52,6 +56,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
     private int nightSpeed = 0;
     private boolean ignoredHelp = true;
     private boolean resetPhantomsForAll = false;
+    public boolean skippingNight = false;
+
+    BossBar bossBar = Bukkit.createBossBar("", BarColor.BLUE, BarStyle.SOLID);
 
     private Map<String, NotificationMessage> notificationMessages = new HashMap<>();
 
@@ -112,6 +119,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
                 getLogger().log(Level.WARNING, "Error while loading notification config of " + key + ": " + e.getMessage());
             }
         }
+
+        bossBar.setColor(BarColor.valueOf(getConfig().getString("bossBarColor")));
+        bossBar.setStyle(BarStyle.valueOf(getConfig().getString("bossBarStyle")));
     }
 
     public WorldInfo getInfo(World world) {
@@ -135,6 +145,7 @@ public class BetterBeds extends JavaPlugin implements Listener {
             NotificationMessage notInfo = getNotification(key);
             switch (notInfo.getLocation()) {
                 case CHAT:
+                case BOSSBAR:
                     sender.spigot().sendMessage(getMessage(sender, key, replacements));
                     break;
                 case TITLE:
@@ -159,8 +170,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
     /**
      * Check if enough players are asleep.
-     * @param world         The world to calculate with
-     * @param playerQuit    Whether this was called by a player quit or not (substracts one from the count)
+     *
+     * @param world      The world to calculate with
+     * @param playerQuit Whether this was called by a player quit or not (substracts one from the count)
      */
     public boolean isPlayerRequirementSatisfied(World world, boolean playerQuit) {
         if (!infoMap.containsKey(world.getUID()))
@@ -176,14 +188,15 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
     /**
      * Get the amount of players required to sleep to advance the night
-     * @param world         The world to check
-     * @param playerQuit    Whether this was called by a player quit or not (substracts one from the count)
+     *
+     * @param world      The world to check
+     * @param playerQuit Whether this was called by a player quit or not (substracts one from the count)
      * @return
      */
     public int getRequiredPlayers(World world, boolean playerQuit) {
         int eligible = 0;
         for (Player p : world.getPlayers()) {
-            if (!p.isSleepingIgnored() && p.hasPermission("betterbeds.sleep") && !p.hasPermission("betterbeds.ignore") && !isPlayerAFK(p) )
+            if (!p.isSleepingIgnored() && p.hasPermission("betterbeds.sleep") && !p.hasPermission("betterbeds.ignore") && !isPlayerAFK(p))
                 eligible++;
         }
 
@@ -201,12 +214,14 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
     /**
      * Check if enough players are asleep and fast forward if so.
-     * @param world      The world to calculate with
+     *
+     * @param world  The world to calculate with
      * @param onQuit
      */
     public boolean checkPlayers(final World world, boolean onQuit) {
         WorldInfo worldInfo = getInfo(world);
         if (isPlayerRequirementSatisfied(world, onQuit)) {
+            skippingNight = true;
             if (nightSpeed == -1) {
                 getLogger().log(Level.INFO, "Skipping to next day in 100 ticks in world " + world.getName());
                 worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
@@ -222,6 +237,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
             } else {
                 if (worldInfo.isTransitioning())
                     return false;
+
+                bossBar.setProgress(1);
+                bossBar.setTitle(lang.getConfig("").get("bossbarSkip"));
 
                 notifyPlayers(world, (worldInfo.getAsleep().size() > 1) ? "notify" : "notifyOnSingle", getReplacements(world, onQuit));
 
@@ -247,14 +265,15 @@ public class BetterBeds extends JavaPlugin implements Listener {
                 }
                 worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
                     if (!isPlayerRequirementSatisfied(world, false)) {
-                        getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
-                        worldInfo.setTransitionTask(0);
-                        return;
+                        //getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
+                        //worldInfo.setTransitionTask(0);
+                        //return;
                     }
                     long currentTime = world.getTime();
                     long newTime = currentTime + skipPerLoop;
                     if (loopAmount.decrementAndGet() <= 0) {
                         getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
+                        skippingNight = false;
                         worldInfo.setTransitionTask(0);
                         setWorldToMorning(world);
                     } else if (newTime < 23460) {
@@ -264,17 +283,18 @@ public class BetterBeds extends JavaPlugin implements Listener {
             }
             return true;
         } else if (worldInfo.isTransitioning()) {
-            getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
-            worldInfo.setTransitionTask(0);
+            //getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
+            //worldInfo.setTransitionTask(0);
         }
         return false;
     }
 
     /**
      * Notifies all the players within a world of skipping the night
-     * @param world         The world
-     * @param key           The key of the message
-     * @param replacements  The replacements
+     *
+     * @param world        The world
+     * @param key          The key of the message
+     * @param replacements The replacements
      */
     public void notifyPlayers(World world, String key, Map<String, String> replacements) {
         NotificationMessage notification = getNotification(key);
@@ -290,24 +310,33 @@ public class BetterBeds extends JavaPlugin implements Listener {
                 case SLEEPING:
                     WorldInfo worldInfo = getInfo(world);
                     for (Player p : world.getPlayers())
-                        if (worldInfo.isAsleep(p))
-                            pl.add(p);
-
+                        if (worldInfo.isAsleep(p)) pl.add(p);
             }
         }
 
+        WorldInfo worldInfo = getInfo(world);
+        Object[] data = getReplacements(world, worldInfo.getLastPlayerToEnterBed(), worldInfo.getAsleep().size(), getRequiredPlayers(world, false)).values().toArray();
+        double percentage = Double.parseDouble(data[4].toString());
+
         for (Player p : getServer().getOnlinePlayers()) {
-            if (p.hasPermission("betterbeds.allnotifications"))
-                pl.add(p);
+            if (p.hasPermission("betterbeds.allnotifications")) pl.add(p);
+        }
+
+        if ((notification.getLocation() == NotificationLocation.BOSSBAR) && !skippingNight) {
+            bossBar.setVisible(true);
+            bossBar.setProgress(percentage / 100);
+            bossBar.setTitle(lang.getConfig("").get("bossbar").replace("{sleeping}", (String) data[2]).replace("{online}", (String) data[3]));
         }
 
         for (Player p : pl) {
-            sendMessage(p, key, replacements);
+            if (notification.getLocation() == NotificationLocation.BOSSBAR) bossBar.addPlayer(p);
+            else sendMessage(p, key, replacements);
         }
     }
 
     /**
      * Resets the world's climate and the list of sleeping players.
+     *
      * @param world The world to change the time for
      */
     public void setWorldToMorning(World world) {
@@ -320,8 +349,6 @@ public class BetterBeds extends JavaPlugin implements Listener {
         if (world.isThundering())
             world.setThundering(false);
 
-        notifyPlayers(world, "wake", getReplacements(world, false));
-
         WorldInfo worldInfo = getInfo(world);
         for (Player player : world.getPlayers()) {
             if (resetPhantomsForAll || worldInfo.isAsleep(player)) {
@@ -330,10 +357,15 @@ public class BetterBeds extends JavaPlugin implements Listener {
         }
 
         worldInfo.clearAsleep();
+
+        notifyPlayers(world, "wake", getReplacements(world, false));
+        bossBar.removeAll();
+        bossBar.setVisible(false);
     }
 
     /**
      * Calculates what happens when a player leaves the bed.
+     *
      * @param player The player who left the bed
      * @param world  The world the bed was in (because it's possible the player isn't there anymore when he existed it)
      * @param onQuit Whether or not this is called on quit
@@ -354,9 +386,14 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
             worldInfo.setAwake(player);
 
-            getLogger().log(Level.INFO, player.getName() + " is not sleeping anymore. " + worldInfo.getAsleep().size() + "/" + requiredPlayers + " players are asleep in world " + world.getName());
+            if(!skippingNight) getLogger().log(Level.INFO, player.getName() + " is not sleeping anymore. " + worldInfo.getAsleep().size() + "/" + requiredPlayers + " players are asleep in world " + world.getName());
 
-            notifyPlayers(world, "leave", getReplacements(world, player.getName(), worldInfo.getAsleep().size(), requiredPlayers));
+            if(!skippingNight) notifyPlayers(world, "leave", getReplacements(world, player.getName(), worldInfo.getAsleep().size(), requiredPlayers));
+
+            if(worldInfo.getAsleep().size() == 0) {
+                bossBar.removeAll();
+                bossBar.setVisible(false);
+            }
 
             checkPlayers(world, false);
             return true;
@@ -369,6 +406,7 @@ public class BetterBeds extends JavaPlugin implements Listener {
      * Currently this only works with the WhosAFK plugin
      * TODO: Add support for checking with more methods
      * TODO: Add a config option to decide whether AFK players should be counted
+     *
      * @param p the player
      * @return boolean - True if Player is currently AFK
      */
@@ -406,10 +444,11 @@ public class BetterBeds extends JavaPlugin implements Listener {
     /**
      * Converts eventual parameters in a message into a replacement map
      * TODO: Make it so that not every parameter is required!
-     * @param world         The World to notify for
-     * @param playername    String of the playername to insert in the message
-     * @param sleeping      Integer of sleeping players
-     * @param required      Integer of players required to sleep in the world
+     *
+     * @param world      The World to notify for
+     * @param playername String of the playername to insert in the message
+     * @param sleeping   Integer of sleeping players
+     * @param required   Integer of players required to sleep in the world
      * @return Replacement map
      */
     public Map<String, String> getReplacements(World world, String playername, int sleeping, int required) {

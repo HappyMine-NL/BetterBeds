@@ -9,3 +9,10 @@ leave: "&c{player}&6 schläft nichtmehr. &c{sleeping}/{required}&6 ({percentage}
 wake: "&6Guten Morgen!"
 notify: "&c{sleeping}&6 Spieler sind schlafen gegangen. Überspringe die Nacht!"
 notifyOnSingle: "&c{player}&6 schläft nun. Überspringe die Nacht!"
+
+# use {sleeping} for the count of the sleeping players
+# use {online} for the online playercount
+bossbar: '&c{sleeping}&6/&c{online} &6Spieler schlafen jetzt'
+
+#
+bossbarSkip: '&6Alle Spieler sind schlafen gegangen. Überspringe die Nacht!'

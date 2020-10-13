@@ -27,5 +27,6 @@ package de.themoep.BetterBeds;
 public enum NotificationLocation {
         CHAT,
         TITLE,
-        ACTIONBAR;
+        ACTIONBAR,
+        BOSSBAR;
 }
