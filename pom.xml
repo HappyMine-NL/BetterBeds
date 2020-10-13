@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.themoep</groupId>
     <artifactId>BetterBeds</artifactId>
-    <version>1.2-SNAPSHOT</version>
+    <version>1.2</version>
     <description>Make sleeping in Beds a lot better!</description>
     <name>BetterBeds</name>
 
@@ -74,31 +74,4 @@
             </properties>
         </profile>
     </profiles>
-
-    <build>
-        <finalName>${project.name}</finalName>
-        <resources>
-            <resource>
-                <filtering>true</filtering>
-                <directory>${project.basedir}/src/main/resources</directory>
-            </resource>
-        </resources>
-
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
-
 </project>
