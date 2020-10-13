@@ -22,7 +22,7 @@ bossBarColor: BLUE
 bossBarStyle: SOLID
 # The Type defines who should get the message.
 # Possibly values:
-#   none - Don't display the message to anyone
+#   noone - Don't display the message to anyone
 #   sleeping - Only players who lye in a bed
 #   world - Every player who is in the same world
 #   server - Every player on the server
