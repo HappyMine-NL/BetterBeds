@@ -5,10 +5,7 @@ import de.themoep.utils.lang.bukkit.LanguageManager;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Statistic;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.World.Environment;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
@@ -54,6 +51,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
     private int minPlayers = 2;
     private double sleepPercentage = 0.5;
     private int nightSpeed = 0;
+    private boolean allowNightSpeedAnimationLeave = false;
+    private String wakeUpSound = "ENTITY_PARROT_AMBIENT";
+    private String bossBarAnimation = "BACKWARD";
     private boolean ignoredHelp = true;
     private boolean resetPhantomsForAll = false;
     public boolean skippingNight = false;
@@ -103,6 +103,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
             sleepPercentage = sleepPercentage / 100;
         }
         nightSpeed = getConfig().getInt("nightSpeed");
+        allowNightSpeedAnimationLeave = getConfig().getBoolean("allowNightSpeedAnimationLeave");
+        wakeUpSound = getConfig().getString("wakeUpSound");
+        bossBarAnimation = getConfig().getString("bossBarAnimation");
         ignoredHelp = getConfig().getBoolean("ignoredHelp");
         resetPhantomsForAll = getConfig().getBoolean("resetPhantomsForAll");
 
@@ -134,7 +137,7 @@ public class BetterBeds extends JavaPlugin implements Listener {
     }
 
     public BaseComponent[] getMessage(CommandSender sender, String key, Map<String, String> replacements) {
-        return new MineDown(lang.getConfig(sender).get(key)).placeholderPrefix("{").placeholderSuffix("}").replace(replacements).toComponent();
+        return new MineDown(lang.getConfig("").get(key)).placeholderPrefix("{").placeholderSuffix("}").replace(replacements).toComponent();
     }
 
     public void sendMessage(CommandSender sender, String key) {
@@ -187,6 +190,7 @@ public class BetterBeds extends JavaPlugin implements Listener {
         return !getInfo(world).getAsleep().isEmpty() && getInfo(world).getAsleep().size() >= getRequiredPlayers(world, playerQuit);
     }
 
+
     /**
      * Get the amount of players required to sleep to advance the night
      *
@@ -222,32 +226,52 @@ public class BetterBeds extends JavaPlugin implements Listener {
     public boolean checkPlayers(final World world, boolean onQuit) {
         WorldInfo worldInfo = getInfo(world);
         if (isPlayerRequirementSatisfied(world, onQuit)) {
-            skippingNight = true;
-            if (nightSpeed == -1) {
-                getLogger().log(Level.INFO, "Skipping to next day in 100 ticks in world " + world.getName());
-                worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
-                    worldInfo.setTransitionTask(0);
-                    if (isPlayerRequirementSatisfied(world, false)) {
-                        setWorldToMorning(world);
-                    }
-                }, 100));
-            } else if (nightSpeed == 0) {
+            if(nightSpeed == -1) nightSpeed = 100;
+
+            if (nightSpeed == 0) {
                 getLogger().log(Level.INFO, "Set time to dawn in world " + world.getName());
                 notifyPlayers(world, (worldInfo.getAsleep().size() > 1) ? "notify" : "notifyOnSingle", getReplacements(world, onQuit));
                 setWorldToMorning(world);
-            } else {
-                if (worldInfo.isTransitioning())
+            } else if (nightSpeed > 0) {
+                if (worldInfo.isTransitioning()) {
                     return false;
+                }
 
-                bossBar.setProgress(1);
+                skippingNight = true;
+/*
+                if(bossBarAnimation.equals("FORWARD") || bossBarAnimation.equals("BACKWARD")) {
+                    if(bossBarAnimation.equals("FORWARD")) {
+                        bossBar.setProgress(0);
+                    } else {
+                        bossBar.setProgress(1);
+                        numberBoss = new AtomicInteger(nightSpeed);
+                    }
+                }*/
+
+                AtomicInteger numberBoss = new AtomicInteger();
+                switch (bossBarAnimation) {
+                    case "FORWARD":
+                        bossBar.setProgress(0);
+                        break;
+                    case "BACKWARD":
+                        numberBoss = new AtomicInteger(nightSpeed);
+                        bossBar.setProgress(0);
+                        break;
+                    default:
+                        bossBar.setProgress(1);
+                }
+
                 bossBar.setTitle(lang.getConfig("").get("bossbarSkip"));
 
                 notifyPlayers(world, (worldInfo.getAsleep().size() > 1) ? "notify" : "notifyOnSingle", getReplacements(world, onQuit));
 
                 getLogger().log(Level.INFO, "Timelapsing " + nightSpeed + " ticks until dawn in world " + world.getName());
                 AtomicInteger loopAmount = new AtomicInteger(nightSpeed);
+
+
                 int period = 1;
                 double skipPerLoopTemp = (23460D - world.getTime()) / nightSpeed;
+
                 long skipPerLoop;
                 if (skipPerLoopTemp < 1) {
                     if (skipPerLoopTemp < 0) {
@@ -264,12 +288,29 @@ public class BetterBeds extends JavaPlugin implements Listener {
                 } else {
                     skipPerLoop = (long) Math.floor(skipPerLoopTemp);
                 }
+
+                AtomicInteger finalNumberBoss = numberBoss;
                 worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
-                    if (!isPlayerRequirementSatisfied(world, false)) {
-                        //getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
-                        //worldInfo.setTransitionTask(0);
-                        //return;
+                    if (!allowNightSpeedAnimationLeave && !isPlayerRequirementSatisfied(world, false)) {
+                        getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
+                        worldInfo.setTransitionTask(0);
+                        skippingNight = false;
+                        bossBar.removeAll();
+                        bossBar.setVisible(false);
+                        return;
                     }
+
+                    switch (bossBarAnimation) {
+                        case "FORWARD":
+                            double percentage = ((double) finalNumberBoss.getAndIncrement()) / nightSpeed;
+                            bossBar.setProgress(percentage);
+                            break;
+                        case "BACKWARD":
+                            percentage = ((double) finalNumberBoss.getAndDecrement()) / nightSpeed;
+                            bossBar.setProgress(percentage);
+                            break;
+                    }
+
                     long currentTime = world.getTime();
                     long newTime = currentTime + skipPerLoop;
                     if (loopAmount.decrementAndGet() <= 0) {
@@ -277,15 +318,20 @@ public class BetterBeds extends JavaPlugin implements Listener {
                         skippingNight = false;
                         worldInfo.setTransitionTask(0);
                         setWorldToMorning(world);
+                        if (!wakeUpSound.equals("NONE"))
+                            world.getPlayers().forEach(player -> player.playSound(player.getLocation(), Sound.valueOf(wakeUpSound), 10, 1));
                     } else if (newTime < 23460) {
                         world.setTime(newTime);
                     }
                 }, period, period));
             }
             return true;
-        } else if (worldInfo.isTransitioning()) {
-            //getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
-            //worldInfo.setTransitionTask(0);
+        } else if (!allowNightSpeedAnimationLeave && worldInfo.isTransitioning()) {
+            getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
+            worldInfo.setTransitionTask(0);
+            skippingNight = false;
+            bossBar.removeAll();
+            bossBar.setVisible(false);
         }
         return false;
     }
@@ -327,6 +373,8 @@ public class BetterBeds extends JavaPlugin implements Listener {
             bossBar.setVisible(true);
             bossBar.setProgress(percentage / 100);
             bossBar.setTitle(lang.getConfig("").get("bossbar").replace("{sleeping}", (String) data[2]).replace("{online}", (String) data[3]));
+        } else if (notification.getLocation() == NotificationLocation.BOSSBAR) {
+            bossBar.setVisible(true);
         }
 
         for (Player p : pl) {
@@ -341,9 +389,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
      * @param world The world to change the time for
      */
     public void setWorldToMorning(World world) {
-        if (world.getTime() < 24000L) {
-            world.setTime(24000L);
-        }
+        if (world.getTime() < 23460L)
+            world.setTime(23460L);
+
         if (world.hasStorm())
             world.setStorm(false);
 
@@ -352,9 +400,8 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
         WorldInfo worldInfo = getInfo(world);
         for (Player player : world.getPlayers()) {
-            if (resetPhantomsForAll || worldInfo.isAsleep(player)) {
+            if (resetPhantomsForAll || worldInfo.isAsleep(player))
                 player.setStatistic(Statistic.TIME_SINCE_REST, 0);
-            }
         }
 
         worldInfo.clearAsleep();
@@ -373,7 +420,6 @@ public class BetterBeds extends JavaPlugin implements Listener {
      * @return boolean - True if we don't need to check the players anymore, False if didn't get checked if we should fast forward
      */
     public boolean calculateBedLeave(Player player, World world, boolean onQuit) {
-
         if (world.getEnvironment() != Environment.NORMAL)
             return true;
 
@@ -387,11 +433,13 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
             worldInfo.setAwake(player);
 
-            if(!skippingNight) getLogger().log(Level.INFO, player.getName() + " is not sleeping anymore. " + worldInfo.getAsleep().size() + "/" + requiredPlayers + " players are asleep in world " + world.getName());
+            if (!skippingNight)
+                getLogger().log(Level.INFO, player.getName() + " is not sleeping anymore. " + worldInfo.getAsleep().size() + "/" + requiredPlayers + " players are asleep in world " + world.getName());
 
-            if(!skippingNight) notifyPlayers(world, "leave", getReplacements(world, player.getName(), worldInfo.getAsleep().size(), requiredPlayers));
+            if (!skippingNight)
+                notifyPlayers(world, "leave", getReplacements(world, player.getName(), worldInfo.getAsleep().size(), requiredPlayers));
 
-            if(worldInfo.getAsleep().size() == 0) {
+            if (worldInfo.getAsleep().size() == 0) {
                 bossBar.removeAll();
                 bossBar.setVisible(false);
             }
