@@ -9,6 +9,11 @@ sleepPercentage: 0.5
 # How long in ticks it takes to pass the night (above 0, which is instant, it uses a transition).
 # Set to -1 to disable the transition animation.
 nightSpeed: 100
+# Allow bed leave during nightspeed animation
+allowNightSpeedAnimationLeave: false
+# Wake up sound, possible values:
+# NONE for no sound, for a full list of sounds see https://helpch.at/docs/1.12/org/bukkit/Sound.html
+wakeUpSound: ENTITY_PARROT_AMBIENT
 # Whether or not ignored players should help with the sleeping percentage if they decide to sleep
 ignoredHelp: true
 # If set to true this will reset the phantom spawn chance for all players in the world when skipping the night

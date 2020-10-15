@@ -94,6 +94,7 @@ public class BetterBedsListener implements Listener {
     public void onPlayerQuit(PlayerQuitEvent event) {
         if (!plugin.calculateBedLeave(event.getPlayer(), event.getPlayer().getWorld(), true))
             plugin.checkPlayers(event.getPlayer().getWorld(), true);
+        if((!plugin.skippingNight) && plugin.bossBar.isVisible()) plugin.bossBar.removePlayer(event.getPlayer());
     }
 
     /**
@@ -104,7 +105,7 @@ public class BetterBedsListener implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event) {
         if (!plugin.calculateBedLeave(event.getPlayer(), event.getPlayer().getWorld(), true))
             plugin.checkPlayers(event.getPlayer().getWorld(), true);
-        if(!plugin.skippingNight && plugin.bossBar.isVisible()) plugin.bossBar.addPlayer(event.getPlayer());
+        if((!plugin.skippingNight) && plugin.bossBar.isVisible()) plugin.bossBar.addPlayer(event.getPlayer());
     }
 
     /**
@@ -113,8 +114,11 @@ public class BetterBedsListener implements Listener {
      */
     @EventHandler
     public void onWorldChange(PlayerChangedWorldEvent event) {
-        if (!plugin.calculateBedLeave(event.getPlayer(), event.getFrom(), false))
+        if (!plugin.calculateBedLeave(event.getPlayer(), event.getFrom(), false)) {
             plugin.checkPlayers(event.getFrom(), false);
-        if(!plugin.skippingNight && plugin.bossBar.isVisible()) plugin.bossBar.addPlayer(event.getPlayer());
+            if((!plugin.skippingNight) && plugin.bossBar.isVisible()) plugin.bossBar.removePlayer(event.getPlayer());
+        } else {
+            if((!plugin.skippingNight) && plugin.bossBar.isVisible()) plugin.bossBar.addPlayer(event.getPlayer());
+        }
     }
 }
