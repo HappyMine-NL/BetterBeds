@@ -7,7 +7,7 @@ minPlayers: 2
 # set it to 1 or 100% to use the plugin and normal sleeping behavior but with the benefit of ignored 
 sleepPercentage: 0.5
 # How long in ticks it takes to pass the night (above 0, which is instant, it uses a transition).
-# Set to -1 to disable the transition animation.
+# Set to -1 to disable the transition animation, values above 100 are currently in a bugged state
 nightSpeed: 100
 # Allow bed leave during nightspeed animation
 allowNightSpeedAnimationLeave: false

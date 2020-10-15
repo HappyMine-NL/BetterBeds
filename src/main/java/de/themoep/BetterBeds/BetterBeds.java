@@ -188,6 +188,7 @@ public class BetterBeds extends JavaPlugin implements Listener {
         return !getInfo(world).getAsleep().isEmpty() && getInfo(world).getAsleep().size() >= getRequiredPlayers(world, playerQuit);
     }
 
+
     /**
      * Get the amount of players required to sleep to advance the night
      *
@@ -224,7 +225,6 @@ public class BetterBeds extends JavaPlugin implements Listener {
         WorldInfo worldInfo = getInfo(world);
         if (isPlayerRequirementSatisfied(world, onQuit)) {
             if (nightSpeed == -1) {
-                Bukkit.broadcastMessage("Check players nightspeed = -1");
                 skippingNight = true;
 
                 bossBar.setProgress(1);
@@ -233,22 +233,19 @@ public class BetterBeds extends JavaPlugin implements Listener {
                 getLogger().log(Level.INFO, "Skipping to next day in 100 ticks in world " + world.getName());
                 worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncDelayedTask(this, () -> {
                     worldInfo.setTransitionTask(0);
-                    if (isPlayerRequirementSatisfied(world, false) && !allowNightSpeedAnimationLeave) {
+                    if (!allowNightSpeedAnimationLeave && isPlayerRequirementSatisfied(world, false)) {
                         setWorldToMorning(world);
                         skippingNight = false;
                     }
                 }, 100));
             } else if (nightSpeed == 0) {
-                Bukkit.broadcastMessage("Check players nightspeed = 0");
                 getLogger().log(Level.INFO, "Set time to dawn in world " + world.getName());
                 notifyPlayers(world, (worldInfo.getAsleep().size() > 1) ? "notify" : "notifyOnSingle", getReplacements(world, onQuit));
                 setWorldToMorning(world);
             } else if (nightSpeed > 0) {
-                Bukkit.broadcastMessage("Check players nightspeed > 0");
                 if (worldInfo.isTransitioning()) {
                     return false;
                 }
-                Bukkit.broadcastMessage("Check players nightspeed > 0 2");
 
                 skippingNight = true;
                 bossBar.setProgress(1);
@@ -281,12 +278,12 @@ public class BetterBeds extends JavaPlugin implements Listener {
                 }
 
                 worldInfo.setTransitionTask(getServer().getScheduler().scheduleSyncRepeatingTask(this, () -> {
-                    if (!isPlayerRequirementSatisfied(world, false) && !allowNightSpeedAnimationLeave) {
-                        Bukkit.broadcastMessage("NOT SATISFIEDDSFFDSDFS ");
+                    if (!allowNightSpeedAnimationLeave && !isPlayerRequirementSatisfied(world, false)) {
                         getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
                         worldInfo.setTransitionTask(0);
                         return;
                     }
+
                     double percentage = ((double) numberBoss.getAndIncrement()) / nightSpeed;
                     bossBar.setProgress(percentage);
 
@@ -301,18 +298,13 @@ public class BetterBeds extends JavaPlugin implements Listener {
                             world.getPlayers().forEach(player -> player.playSound(player.getLocation(), Sound.valueOf(wakeUpSound), 10, 1));
                     } else if (newTime < 23460) {
                         world.setTime(newTime);
-                    } else {
-                        Bukkit.broadcastMessage("WAJOWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWW " + newTime);
                     }
                 }, period, period));
             }
             return true;
         } else if (worldInfo.isTransitioning()) {
-            Bukkit.broadcastMessage("NOT WTTTTTTTTTTTTFFFFFFFFFFFF SATISFIEDDSFFDSDFS ");
             getServer().getScheduler().cancelTask(worldInfo.getTransitionTask());
             worldInfo.setTransitionTask(0);
-        } else {
-            Bukkit.broadcastMessage("Random weird shittt ");
         }
         return false;
     }
@@ -354,6 +346,8 @@ public class BetterBeds extends JavaPlugin implements Listener {
             bossBar.setVisible(true);
             bossBar.setProgress(percentage / 100);
             bossBar.setTitle(lang.getConfig("").get("bossbar").replace("{sleeping}", (String) data[2]).replace("{online}", (String) data[3]));
+        } else if (notification.getLocation() == NotificationLocation.BOSSBAR) {
+            bossBar.setVisible(true);
         }
 
         for (Player p : pl) {
@@ -368,9 +362,9 @@ public class BetterBeds extends JavaPlugin implements Listener {
      * @param world The world to change the time for
      */
     public void setWorldToMorning(World world) {
-        if (world.getTime() < 23460L) {
+        if (world.getTime() < 23460L)
             world.setTime(23460L);
-        }
+
         if (world.hasStorm())
             world.setStorm(false);
 
@@ -379,9 +373,8 @@ public class BetterBeds extends JavaPlugin implements Listener {
 
         WorldInfo worldInfo = getInfo(world);
         for (Player player : world.getPlayers()) {
-            if (resetPhantomsForAll || worldInfo.isAsleep(player)) {
+            if (resetPhantomsForAll || worldInfo.isAsleep(player))
                 player.setStatistic(Statistic.TIME_SINCE_REST, 0);
-            }
         }
 
         worldInfo.clearAsleep();
@@ -400,7 +393,6 @@ public class BetterBeds extends JavaPlugin implements Listener {
      * @return boolean - True if we don't need to check the players anymore, False if didn't get checked if we should fast forward
      */
     public boolean calculateBedLeave(Player player, World world, boolean onQuit) {
-
         if (world.getEnvironment() != Environment.NORMAL)
             return true;
 
