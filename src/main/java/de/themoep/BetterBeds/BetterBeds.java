@@ -233,20 +233,10 @@ public class BetterBeds extends JavaPlugin implements Listener {
                 notifyPlayers(world, (worldInfo.getAsleep().size() > 1) ? "notify" : "notifyOnSingle", getReplacements(world, onQuit));
                 setWorldToMorning(world);
             } else if (nightSpeed > 0) {
-                if (worldInfo.isTransitioning()) {
+                if (worldInfo.isTransitioning())
                     return false;
-                }
 
                 skippingNight = true;
-/*
-                if(bossBarAnimation.equals("FORWARD") || bossBarAnimation.equals("BACKWARD")) {
-                    if(bossBarAnimation.equals("FORWARD")) {
-                        bossBar.setProgress(0);
-                    } else {
-                        bossBar.setProgress(1);
-                        numberBoss = new AtomicInteger(nightSpeed);
-                    }
-                }*/
 
                 AtomicInteger numberBoss = new AtomicInteger();
                 switch (bossBarAnimation) {

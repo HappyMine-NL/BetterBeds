@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.themoep</groupId>
     <artifactId>BetterBeds</artifactId>
-    <version>1.2</version>
+    <version>1.3</version>
     <description>Make sleeping in Beds a lot better!</description>
     <name>BetterBeds</name>
 
@@ -13,7 +13,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <minecraft.plugin.version>1.2-SNAPSHOT ${buildDescription}</minecraft.plugin.version>
+        <minecraft.plugin.version>1.3 ${buildDescription}</minecraft.plugin.version>
     </properties>
 
     <repositories>
