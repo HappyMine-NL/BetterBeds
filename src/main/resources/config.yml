@@ -22,9 +22,12 @@ resetPhantomsForAll: false
 # BossBar color on bossbar notifications, possible values:
 # BLUE, GREEN, PINK, PURPLE, RED, WHITE, YELLOW
 bossBarColor: BLUE
-# BossBar style on BossBar notificaitons, possible values:
+# BossBar style on BossBar notifications, possible values:
 # SOLID, SEGMENTED_6, SEGMENTED_10, SEGMENTED_12, SEGMENTED_20
 bossBarStyle: SOLID
+# BossBar animation, possible values:
+# BACKWARD, FORWARD, OFF
+bossBarAnimation: BACKWARD
 # The Type defines who should get the message.
 # Possibly values:
 #   noone - Don't display the message to anyone
